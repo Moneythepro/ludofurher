@@ -124,128 +124,190 @@
   }
 
   // Draw board and pieces
-  function draw(){
-    if(!ctx) return;
+function draw() {
+    if (!ctx) return;
     const w = canvas.width;
     const gridInfo = makeGridPositions(w);
-    // compute trackMap if not
-    if(trackMap.length === 0) trackMap = makeTrack(gridInfo.cells);
-    // background
+    if (trackMap.length === 0) trackMap = makeTrack(gridInfo.cells);
+
+    // Background
     ctx.fillStyle = '#fff';
-    ctx.fillRect(0,0,w,w);
-    // draw ring background
-    // draw grid lightly
-    for(let r=0;r<GRID;r++){
-      for(let c=0;c<GRID;c++){
-        const idx = r*GRID + c;
-        const cell = gridInfo.cells[idx];
-        ctx.fillStyle = '#f8fafc';
-        ctx.fillRect(cell.x - gridInfo.s/2 + 2, cell.y - gridInfo.s/2 + 2, gridInfo.s - 4, gridInfo.s -4);
-      }
-    }
-    // draw main track cells
-    for(let i=0;i<trackMap.length;i++){
-      const idx = trackMap[i];
-      const cell = gridInfo.cells[idx];
-      ctx.fillStyle = '#ffffff';
-      roundRect(ctx, cell.x - gridInfo.s/2 + 6, cell.y - gridInfo.s/2 + 6, gridInfo.s - 12, gridInfo.s - 12, 6, true, false);
-      ctx.strokeStyle = '#e6eef6';
-      ctx.stroke();
-    }
-    // draw home bases as 4 large colored squares in corners
+    ctx.fillRect(0, 0, w, w);
+
+    // Player quadrants (gradient fill)
     const homeSize = gridInfo.s * 6;
     const hs = Math.floor(homeSize);
-    // top-left red
-    const tl = gridInfo.cells[(1*GRID)+1];
-    ctx.fillStyle = PLAYER_COLORS[0] + '33';
-    roundRect(ctx, tl.x - gridInfo.s*3, tl.y - gridInfo.s*3, hs, hs, 10, true, false);
-    // top-right green
-    const tr = gridInfo.cells[(1*GRID)+(GRID-2)];
-    ctx.fillStyle = PLAYER_COLORS[1] + '33';
-    roundRect(ctx, tr.x - gridInfo.s*3, tr.y - gridInfo.s*3, hs, hs, 10, true, false);
-    // bottom-right yellow
-    const br = gridInfo.cells[((GRID-2)*GRID)+(GRID-2)];
-    ctx.fillStyle = PLAYER_COLORS[2] + '33';
-    roundRect(ctx, br.x - gridInfo.s*3, br.y - gridInfo.s*3, hs, hs, 10, true, false);
-    // bottom-left blue
-    const bl = gridInfo.cells[((GRID-2)*GRID)+1];
-    ctx.fillStyle = PLAYER_COLORS[3] + '33';
-    roundRect(ctx, bl.x - gridInfo.s*3, bl.y - gridInfo.s*3, hs, hs, 10, true, false);
+    const corners = [
+        { cell: gridInfo.cells[(1 * GRID) + 1], color: PLAYER_COLORS[0] }, // Red
+        { cell: gridInfo.cells[(1 * GRID) + (GRID - 2)], color: PLAYER_COLORS[1] }, // Green
+        { cell: gridInfo.cells[((GRID - 2) * GRID) + (GRID - 2)], color: PLAYER_COLORS[2] }, // Yellow
+        { cell: gridInfo.cells[((GRID - 2) * GRID) + 1], color: PLAYER_COLORS[3] }  // Blue
+    ];
+    corners.forEach((corner) => {
+        const grad = ctx.createLinearGradient(
+            corner.cell.x - hs / 2, corner.cell.y - hs / 2,
+            corner.cell.x + hs / 2, corner.cell.y + hs / 2
+        );
+        grad.addColorStop(0, corner.color);
+        grad.addColorStop(1, '#fff');
+        ctx.fillStyle = grad;
+        roundRect(ctx, corner.cell.x - gridInfo.s * 3, corner.cell.y - gridInfo.s * 3, hs, hs, 10, true, false);
+    });
 
-    // draw pieces
-    for(const p of state.players){
-      p.pieces.forEach((pos,i) => {
-        let xy = posToXY(pos, gridInfo);
-        // if at home, position inside their home base (arrange 2x2)
-        if(pos === -1){
-          const baseCenters = [
-            {x: tl.x - gridInfo.s, y: tl.y - gridInfo.s},
-            {x: tl.x + gridInfo.s, y: tl.y - gridInfo.s},
-            {x: tl.x - gridInfo.s, y: tl.y + gridInfo.s},
-            {x: tl.x + gridInfo.s, y: tl.y + gridInfo.s}
-          ];
-          let base = baseCenters;
-          if(p.id === 1) base = [
-            {x: tr.x - gridInfo.s, y: tr.y - gridInfo.s},
-            {x: tr.x + gridInfo.s, y: tr.y - gridInfo.s},
-            {x: tr.x - gridInfo.s, y: tr.y + gridInfo.s},
-            {x: tr.x + gridInfo.s, y: tr.y + gridInfo.s}
-          ];
-          if(p.id === 2) base = [
-            {x: br.x - gridInfo.s, y: br.y - gridInfo.s},
-            {x: br.x + gridInfo.s, y: br.y - gridInfo.s},
-            {x: br.x - gridInfo.s, y: br.y + gridInfo.s},
-            {x: br.x + gridInfo.s, y: br.y + gridInfo.s}
-          ];
-          if(p.id === 3) base = [
-            {x: bl.x - gridInfo.s, y: bl.y - gridInfo.s},
-            {x: bl.x + gridInfo.s, y: bl.y - gridInfo.s},
-            {x: bl.x - gridInfo.s, y: bl.y + gridInfo.s},
-            {x: bl.x + gridInfo.s, y: bl.y + gridInfo.s}
-          ];
-          xy = base[i];
+    // Goal paths (Ludo King style)
+    const pathLen = 6;
+    const goalPaths = [
+        { color: PLAYER_COLORS[0], dir: 'down', start: { r: 6, c: 1 } }, // Red
+        { color: PLAYER_COLORS[1], dir: 'left', start: { r: 1, c: 8 } }, // Green
+        { color: PLAYER_COLORS[2], dir: 'up', start: { r: 8, c: 13 } }, // Yellow
+        { color: PLAYER_COLORS[3], dir: 'right', start: { r: 13, c: 6 } } // Blue
+    ];
+    goalPaths.forEach(gp => {
+        for (let i = 0; i < pathLen; i++) {
+            let r = gp.start.r;
+            let c = gp.start.c;
+            if (gp.dir === 'down') r += i;
+            if (gp.dir === 'up') r -= i;
+            if (gp.dir === 'left') c -= i;
+            if (gp.dir === 'right') c += i;
+            const idx = r * GRID + c;
+            const cell = gridInfo.cells[idx];
+            ctx.fillStyle = gp.color;
+            ctx.fillRect(cell.x - gridInfo.s / 2 + 2, cell.y - gridInfo.s / 2 + 2, gridInfo.s - 4, gridInfo.s - 4);
+            ctx.strokeStyle = '#fff';
+            ctx.strokeRect(cell.x - gridInfo.s / 2 + 2, cell.y - gridInfo.s / 2 + 2, gridInfo.s - 4, gridInfo.s - 4);
         }
-        if(!xy) return;
-        drawPiece(xy.x, xy.y, Math.floor(gridInfo.s/2.2), p.color, `${p.id}-${i}`);
-      });
+    });
+
+    // Center home triangles
+    const center = { x: w / 2, y: w / 2 };
+    const triSize = gridInfo.s * 3;
+    const centerColors = [PLAYER_COLORS[0], PLAYER_COLORS[1], PLAYER_COLORS[2], PLAYER_COLORS[3]];
+    const angles = [-Math.PI / 2, 0, Math.PI / 2, Math.PI];
+    for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(center.x, center.y);
+        ctx.lineTo(center.x + Math.cos(angles[i]) * triSize, center.y + Math.sin(angles[i]) * triSize);
+        ctx.lineTo(center.x + Math.cos(angles[i] + Math.PI / 2) * triSize, center.y + Math.sin(angles[i] + Math.PI / 2) * triSize);
+        ctx.closePath();
+        ctx.fillStyle = centerColors[i];
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.stroke();
     }
 
-    // draw overlay for current player
+    // Safe zone indexes (accurate Ludo King)
+    const safeCells = [0, 8, 13, 21, 26, 34, 39, 47];
+
+    // Draw main track + safe zones
+    for (let i = 0; i < trackMap.length; i++) {
+        const idx = trackMap[i];
+        const cell = gridInfo.cells[idx];
+        ctx.fillStyle = '#ffffff';
+        roundRect(ctx, cell.x - gridInfo.s / 2 + 6, cell.y - gridInfo.s / 2 + 6, gridInfo.s - 12, gridInfo.s - 12, 6, true, false);
+        ctx.strokeStyle = '#ccc';
+        ctx.stroke();
+
+        if (safeCells.includes(i)) {
+            drawStar(ctx, cell.x, cell.y, gridInfo.s / 3, '#f4c542');
+        }
+    }
+
+    // Draw pieces
+    for (const p of state.players) {
+        p.pieces.forEach((pos, i) => {
+            let xy = posToXY(pos, gridInfo);
+            if (pos === -1) {
+                const baseCenters = [
+                    { x: corners[p.id].cell.x - gridInfo.s, y: corners[p.id].cell.y - gridInfo.s },
+                    { x: corners[p.id].cell.x + gridInfo.s, y: corners[p.id].cell.y - gridInfo.s },
+                    { x: corners[p.id].cell.x - gridInfo.s, y: corners[p.id].cell.y + gridInfo.s },
+                    { x: corners[p.id].cell.x + gridInfo.s, y: corners[p.id].cell.y + gridInfo.s }
+                ];
+                xy = baseCenters[i];
+            }
+            if (!xy) return;
+            drawPiece(xy.x, xy.y, Math.floor(gridInfo.s / 2.2), p.color, `${p.id}-${i}`);
+        });
+    }
+
+    // Highlight current player's turn
     const current = state.players[state.turn];
     ctx.fillStyle = current.color + '22';
-    ctx.fillRect(0,0, w, 40);
-  }
+    ctx.fillRect(0, 0, w, 40);
+}
 
-  function roundRect(ctx,x,y,w,h,r,fill,stroke){
+// Rounded rectangle helper
+function roundRect(ctx, x, y, w, h, r, fill, stroke) {
     if (typeof r === 'undefined') r = 5;
     ctx.beginPath();
-    ctx.moveTo(x+r,y);
-    ctx.arcTo(x+w,y,x+w,y+h,r);
-    ctx.arcTo(x+w,y+h,x,y+h,r);
-    ctx.arcTo(x,y+h,x,y,r);
-    ctx.arcTo(x,y,x+w,y,r);
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
     ctx.closePath();
-    if(fill){ctx.fill();}
-    if(stroke){ctx.stroke();}
-  }
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+}
 
-  function drawPiece(x,y,r,color,id){
+// Draw glossy piece
+function drawPiece(x, y, r, color, id) {
+    // Outer glossy gradient
+    const grad = ctx.createRadialGradient(x - r / 3, y - r / 3, r / 5, x, y, r);
+    grad.addColorStop(0, lightenColor(color, 0.4));
+    grad.addColorStop(1, color);
+    ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.arc(x,y,r,0,Math.PI*2);
-    ctx.fillStyle = color;
+    ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
-    // white inner
+
+    // White inner circle
     ctx.beginPath();
-    ctx.arc(x,y,r/2.8,0,Math.PI*2);
+    ctx.arc(x, y, r / 2.8, 0, Math.PI * 2);
     ctx.fillStyle = '#fff';
     ctx.fill();
-    // small id
+
+    // Piece number
     ctx.fillStyle = '#000';
-    ctx.font = `${Math.max(10, Math.floor(r/3))}px sans-serif`;
+    ctx.font = `${Math.max(10, Math.floor(r / 3))}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(id.split('-')[1], x, y);
-  }
+}
+
+// Draw star for safe zones
+function drawStar(ctx, cx, cy, size, color) {
+    let outerRadius = size;
+    let innerRadius = size / 2;
+    let rot = Math.PI / 2 * 3;
+    let step = Math.PI / 5;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - outerRadius);
+    for (let i = 0; i < 5; i++) {
+        ctx.lineTo(cx + Math.cos(rot) * outerRadius, cy + Math.sin(rot) * outerRadius);
+        rot += step;
+        ctx.lineTo(cx + Math.cos(rot) * innerRadius, cy + Math.sin(rot) * innerRadius);
+        rot += step;
+    }
+    ctx.lineTo(cx, cy - outerRadius);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+}
+
+// Lighten color
+function lightenColor(color, percent) {
+    const num = parseInt(color.replace("#", ""), 16);
+    let r = (num >> 16) + Math.floor(255 * percent);
+    let g = ((num >> 8) & 0x00FF) + Math.floor(255 * percent);
+    let b = (num & 0x0000FF) + Math.floor(255 * percent);
+    r = (r < 255) ? r : 255;
+    g = (g < 255) ? g : 255;
+    b = (b < 255) ? b : 255;
+    return `rgb(${r},${g},${b})`;
+            }
+
 
   // game mechanics helpers
   function rollDice(){
