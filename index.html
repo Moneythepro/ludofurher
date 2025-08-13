@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ludo PWA — Pass & Play</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="assets/icons/icon-96.png" sizes="96x96">
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <meta name="description" content="Offline-ready Ludo board game. Pass-and-play for 2–4 players.">
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">
+        <img src="assets/icons/icon-72.png" alt="Ludo icon">
+        <h1>Ludo PWA</h1>
+      </div>
+      <button id="installBtn" class="btn ghost" hidden>Install</button>
+    </header>
+
+    <main id="screen-start" class="screen active">
+      <section class="card">
+        <h2>Start Game</h2>
+        <div class="grid two">
+          <label>Players
+            <select id="players">
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4" selected>4</option>
+            </select>
+          </label>
+          <label>Target
+            <select id="target">
+              <option value="1" selected>First to home (1 token)</option>
+              <option value="2">2 tokens to home</option>
+              <option value="4">All tokens to home</option>
+            </select>
+          </label>
+        </div>
+
+        <details class="mt">
+          <summary>Player Names & Colors</summary>
+          <div class="grid two mt">
+            <label>Red name <input id="p0name" placeholder="Red"></label>
+            <label>Green name <input id="p1name" placeholder="Green"></label>
+            <label>Yellow name <input id="p2name" placeholder="Yellow"></label>
+            <label>Blue name <input id="p3name" placeholder="Blue"></label>
+          </div>
+        </details>
+
+        <button id="btnStart" class="btn primary mt">Play</button>
+        <p class="muted mt-s">Works offline. Optimized for GitHub Pages.</p>
+      </section>
+
+      <section class="card">
+        <h2>How to Play</h2>
+        <ul>
+          <li>Pass-and-play on one device (2–4 players).</li>
+          <li>Tap the dice to roll. Move any legal token.</li>
+          <li>Six gives another roll. Capture sends opponents to base.</li>
+        </ul>
+      </section>
+    </main>
+
+    <main id="screen-game" class="screen">
+      <section class="board-wrap">
+        <svg id="board" viewBox="0 0 600 600" aria-label="Ludo board"></svg>
+        <div class="hud">
+          <div id="turnInfo"></div>
+          <button id="btnRoll" class="btn big">Roll 🎲</button>
+          <div id="rollValue" class="roll">—</div>
+        </div>
+      </section>
+    </main>
+
+    <dialog id="winnerModal">
+      <h2 id="winnerTitle">Winner!</h2>
+      <p id="winnerText"></p>
+      <div class="actions">
+        <button id="btnAgain" class="btn">Play Again</button>
+        <button id="btnHome" class="btn ghost">Home</button>
+      </div>
+    </dialog>
+
+    <footer class="bottombar">
+      <a href="https://github.com/" target="_blank" rel="noopener">GitHub</a>
+      <span>•</span>
+      <a href="#" id="shareLink">Share</a>
+      <span id="offlineBadge" class="chip" hidden>Offline</span>
+    </footer>
+  </div>
+
+  <script type="module" src="app.js"></script>
+  <script>
+  // PWA install prompt
+  let deferredPrompt;
+  const installBtn = document.getElementById('installBtn');
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBtn.hidden = false;
+  });
+  installBtn?.addEventListener('click', async () => {
+    installBtn.hidden = true;
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+    }
+  });
+
+  // SW
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js');
+    });
+  }
+  </script>
+</body>
+</html>
