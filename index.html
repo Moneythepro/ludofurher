@@ -10,32 +10,46 @@
 </head>
 <body>
   <div id="app">
+    
+    <!-- Top bar -->
     <header class="topbar">
       <button id="menuBtn" class="icon">☰</button>
       <div class="title">Ludo Lite</div>
       <button id="newGameBtn" class="btn small">New</button>
     </header>
 
+    <!-- Game area -->
     <main class="game-wrap">
+      
+      <!-- Board -->
       <section class="board-wrap">
         <canvas id="board" width="720" height="720" touch-action="none"></canvas>
       </section>
 
+      <!-- Controls -->
       <section class="controls">
-        <div class="players-info" id="playersInfo"></div>
+        <div class="players-info" id="playersInfo">
+          <div class="player" data-color="red">🔴 Red</div>
+          <div class="player" data-color="green">🟢 Green</div>
+          <div class="player" data-color="yellow">🟡 Yellow</div>
+          <div class="player" data-color="blue">🔵 Blue</div>
+        </div>
+        
         <div class="dice-row">
           <div id="dice" class="dice">🎲<span id="diceVal">-</span></div>
           <button id="rollBtn" class="btn big">Roll</button>
         </div>
+
         <div class="hint" id="hint">Tap a token to move after rolling.</div>
       </section>
     </main>
 
+    <!-- Footer -->
     <footer class="footer">
       <div class="credits">Pass-and-play • Mobile-first • Light theme</div>
     </footer>
 
-    <!-- Simple modals -->
+    <!-- Modal -->
     <div id="modal" class="modal hidden">
       <div class="modal-card">
         <h3 id="modalTitle">Title</h3>
