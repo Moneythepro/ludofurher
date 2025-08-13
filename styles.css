@@ -112,3 +112,8 @@ dialog::backdrop { background: rgba(0,0,0,0.6); }
   background: var(--primary);
   color: #fff;
 }
+
+/* Ludo board cosmetics */
+#board .tile { stroke: #1f2a44; stroke-width: 1; }
+.token { transition: transform 220ms ease; }
+.token:hover { filter: brightness(1.08); }
